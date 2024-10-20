@@ -20,8 +20,10 @@ CGameController::CGameController(CGameContext *pGameServer)
 	m_GameStartTick = Server()->Tick();
 
 	// info
-	m_GameFlags = 0;
+	m_GameFlags = GAMEFLAG_TEAMS;
 	m_RealPlayerNum = 0;
+	m_aTeamPlayersCount[TEAM_RED] = 0;
+	m_aTeamPlayersCount[TEAM_BLUE] = 0;
 	m_pGameType = "GhostHunt idm";
 
 	// spawn
@@ -113,7 +115,17 @@ void CGameController::OnCharacterSpawn(CCharacter *pChr)
 
 	// give default weapons
 	pChr->GiveWeapon(WEAPON_HAMMER, -1);
-	pChr->GiveWeapon(WEAPON_GUN, 10);
+
+	if(pChr->GetPlayer()->GetTeam() == TEAM_BLUE) // human
+	{
+		// give flashlight
+		pChr->GiveWeapon(WEAPON_GUN, -1);
+		pChr->SetFlashlight(true);
+
+		// give ghostcleaner
+		pChr->GiveWeapon(WEAPON_GRENADE, -1);
+		pChr->SetGhostCleaner(true);
+	}
 }
 
 bool CGameController::OnEntity(int Index, vec2 Pos)
@@ -144,6 +156,7 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	case ENTITY_HEALTH_1:
 		Type = PICKUP_HEALTH;
 		break;
+	/*
 	case ENTITY_WEAPON_SHOTGUN:
 		Type = PICKUP_SHOTGUN;
 		break;
@@ -156,6 +169,7 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	case ENTITY_POWERUP_NINJA:
 		Type = PICKUP_NINJA;
 		break;
+	*/
 	}
 
 	if(Type != -1)
@@ -171,6 +185,8 @@ void CGameController::OnPlayerConnect(CPlayer *pPlayer)
 {
 	int ClientID = pPlayer->GetCID();
 	pPlayer->Respawn();
+	if(pPlayer->GetTeam() != TEAM_SPECTATORS)
+		m_aTeamPlayersCount[pPlayer->GetTeam()]++;
 
 	m_RealPlayerNum++;
 
@@ -187,6 +203,8 @@ void CGameController::OnPlayerDisconnect(CPlayer *pPlayer)
 	pPlayer->OnDisconnect();
 
 	m_RealPlayerNum--;
+	if(pPlayer->GetTeam() != TEAM_SPECTATORS)
+		m_aTeamPlayersCount[pPlayer->GetTeam()]--;
 
 	int ClientID = pPlayer->GetCID();
 	if(Server()->ClientIngame(ClientID))
@@ -244,6 +262,13 @@ void CGameController::Snap(int SnappingClient)
 	pGameData->m_GameStartTick = m_GameStartTick;
 	pGameData->m_GameStateFlags = 0;
 	pGameData->m_GameStateEndTick = 0; // no timer/infinite = 0, on end = GameEndTick, otherwise = GameStateEndTick
+
+	CNetObj_GameDataTeam *pGameDataTeam = static_cast<CNetObj_GameDataTeam *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATATEAM, 0, sizeof(CNetObj_GameDataTeam)));
+	if(!pGameDataTeam)
+		return;
+
+	pGameDataTeam->m_TeamscoreBlue = m_aTeamPlayersCount[TEAM_BLUE];
+	pGameDataTeam->m_TeamscoreRed = m_aTeamPlayersCount[TEAM_RED];
 
 	// demo recording
 	if(SnappingClient == -1)
@@ -412,6 +437,33 @@ void CGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 	// reset inactivity counter when joining the game
 	if(OldTeam == TEAM_SPECTATORS)
 		pPlayer->m_InactivityTickCounter = 0;
+	else
+		m_aTeamPlayersCount[OldTeam]--;
+
+	if(pPlayer->GetTeam() != TEAM_SPECTATORS)
+		m_aTeamPlayersCount[pPlayer->GetTeam()]++;
+}
+
+bool CGameController::IsFriendlyFire(int ClientID1, int ClientID2) const
+{
+	if(ClientID1 == ClientID2)
+		return false;
+
+	if(IsTeamplay())
+	{
+		if(!GameServer()->m_apPlayers[ClientID1] || !GameServer()->m_apPlayers[ClientID2])
+			return false;
+
+		if(!Config()->m_SvTeamdamage && GameServer()->m_apPlayers[ClientID1]->GetTeam() == GameServer()->m_apPlayers[ClientID2]->GetTeam())
+			return true;
+	}
+
+	return false;
+}
+
+bool CGameController::IsFriendlyTeamFire(int Team1, int Team2) const
+{
+	return IsTeamplay() && !Config()->m_SvTeamdamage && Team1 == Team2;
 }
 
 void CGameController::RegisterChatCommands(CCommandManager *pManager)

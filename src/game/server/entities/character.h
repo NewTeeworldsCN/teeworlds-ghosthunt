@@ -8,6 +8,8 @@
 #include <game/gamecore.h>
 #include <game/server/entity.h>
 
+#include <vector>
+
 class CCharacter : public CEntity
 {
 	MACRO_ALLOC_POOL_ID()
@@ -22,6 +24,7 @@ public:
 	};
 
 	CCharacter(CGameWorld *pWorld);
+	~CCharacter();
 
 	void Reset() override;
 	void Destroy() override;
@@ -62,7 +65,9 @@ public:
 	bool IsAlive() const { return m_Alive; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 
+	void OnGhostDisconnected(CCharacter *pGhost);
 private:
+	void SnapCharacter(int SnappingClient);
 	// player controlling this character
 	class CPlayer *m_pPlayer;
 
@@ -124,9 +129,53 @@ private:
 	int m_ReckoningTick; // tick that we are performing dead reckoning From
 	CCharacterCore m_SendCore; // core that we should send
 	CCharacterCore m_ReckoningCore; // the dead reckoning core
+
+	bool m_HasFlashlight;
+	bool m_HasGhostCleaner;
+
+	bool m_IsFlashlightOpened;
+	bool m_IsGhostCleanerUsing;
+	bool m_IsVisible;
+	bool m_IsCaught;
+
+	int m_FlashlightPower;
+	int m_GhostCleanerPower;
+
+	int m_aFlashlightIDs[2];
+
+	int m_LastVisibleTick;
+
+	std::vector<CCharacter *> m_vCaughtGhosts;
 public:
+	inline bool HasFlashlight() { return m_HasFlashlight; }
+	inline bool HasGhostCleaner() { return m_HasGhostCleaner; }
+
+	inline bool IsFlashlightOpened() { return m_IsFlashlightOpened; }
+	inline bool IsGhostCleanerUsing() { return m_IsGhostCleanerUsing; }
+	inline bool IsVisible() { return m_IsVisible; }
+	inline bool IsCaught() { return m_IsCaught; }
+
+	int GetFlashlightPower() const { return m_FlashlightPower; }
+	int GetGhostCleanerPower() const { return m_GhostCleanerPower; }
+
+	int GetActiveWeapon() const { return m_ActiveWeapon; }
 	int GetHealth() const { return m_Health; }
 	int GetArmor() const { return m_Armor; }
+
+	vec2 GetDirection() const;
+
+	bool IsLighting();
+
+	void CatchGhost(CCharacter *pGhost);
+	void BeDraging(vec2 From);
+	void BeCaught(bool Catch);
+	void SetFlashlight(bool Give);
+	void SetGhostCleaner(bool Give);
+
+	void SetPos(vec2 Pos);
+	void SetVel(vec2 Vel);
+
+	void ClearCaughtList();
 };
 
 #endif

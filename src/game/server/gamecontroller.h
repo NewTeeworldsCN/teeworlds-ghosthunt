@@ -62,6 +62,7 @@ protected:
 	// info
 	int m_GameFlags;
 	int m_RealPlayerNum;
+	int m_aTeamPlayersCount[NUM_TEAMS];
 	const char *m_pGameType;
 
 	void SendGameInfo(int ClientID);
@@ -120,8 +121,9 @@ public:
 	bool CanChangeTeam(class CPlayer *pPlayer, int JoinTeam) const;
 	void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg = true);
 
-	bool IsFriendlyFire(int ClientID1, int ClientID2) { return false; }
-	bool IsFriendlyTeamFire(int Team1, int Team2) { return false; }
+	bool IsFriendlyFire(int ClientID1, int ClientID2) const;
+	bool IsFriendlyTeamFire(int Team1, int Team2) const;
+	bool IsTeamplay() const { return m_GameFlags & GAMEFLAG_TEAMS; }
 
 	// info
 	const char *GetGameType() const { return m_pGameType; }

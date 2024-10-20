@@ -7,6 +7,8 @@
 #include <game/server/player.h>
 #include <generated/server_data.h>
 
+#include <algorithm>
+
 #include "character.h"
 #include "laser.h"
 #include "projectile.h"
@@ -46,6 +48,19 @@ CCharacter::CCharacter(CGameWorld *pWorld) :
 	m_Health = 0;
 	m_Armor = 0;
 	m_TriggeredEvents = 0;
+
+	for(int i = 0; i < 2; i++)
+	{
+		m_aFlashlightIDs[i] = Server()->SnapNewID();
+	}
+}
+
+CCharacter::~CCharacter()
+{
+	for(int i = 0; i < 2; i++)
+	{
+		Server()->SnapFreeID(m_aFlashlightIDs[i]);
+	}
 }
 
 void CCharacter::Reset()
@@ -58,7 +73,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_EmoteStop = -1;
 	m_LastAction = -1;
 	m_LastNoAmmoSound = -1;
-	m_ActiveWeapon = WEAPON_GUN;
+	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
 
@@ -76,6 +91,9 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	GameWorld()->InsertEntity(this);
 	m_Alive = true;
+
+	m_IsFlashlightOpened = false;
+	m_IsVisible = true;
 
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
@@ -244,7 +262,7 @@ void CCharacter::HandleWeaponSwitch()
 
 void CCharacter::FireWeapon()
 {
-	if(m_ReloadTimer != 0)
+	if(m_ReloadTimer != 0 || m_IsCaught)
 		return;
 
 	DoWeaponSwitch();
@@ -304,6 +322,9 @@ void CCharacter::FireWeapon()
 
 			if((pTarget == this) || GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, nullptr, nullptr))
 				continue;
+			// the ghosts can't be hit
+			if(pTarget->GetPlayer()->GetTeam() == TEAM_RED)
+				continue;
 
 			// set his velocity to fast upward (for now)
 			if(length(pTarget->m_Pos - ProjStartPos) > 0.0f)
@@ -328,8 +349,15 @@ void CCharacter::FireWeapon()
 	}
 	break;
 
-	case WEAPON_GUN:
+	case WEAPON_GUN: // flash light
 	{
+		if(m_HasFlashlight)
+		{
+			m_IsFlashlightOpened = !m_IsFlashlightOpened;
+			GameServer()->CreateSound(m_Pos, SOUND_WEAPON_NOAMMO);
+			return;
+		}
+
 		new CProjectile(GameWorld(), WEAPON_GUN,
 			m_pPlayer->GetCID(),
 			ProjStartPos,
@@ -366,6 +394,17 @@ void CCharacter::FireWeapon()
 
 	case WEAPON_GRENADE:
 	{
+		if(m_HasGhostCleaner)
+		{
+			if(m_GhostCleanerPower)
+			{
+				m_IsGhostCleanerUsing = true;
+				if(Server()->Tick() % 4 == 0)
+					GameServer()->CreateSound(m_Pos, SOUND_HOOK_LOOP);
+			}
+			return;
+		}
+
 		new CProjectile(GameWorld(), WEAPON_GRENADE,
 			m_pPlayer->GetCID(),
 			ProjStartPos,
@@ -421,6 +460,7 @@ void CCharacter::HandleWeapons()
 	// fire Weapon, if wanted
 	FireWeapon();
 
+	/*
 	// ammo regen
 	int AmmoRegenTime = g_pData->m_Weapons.m_aId[m_ActiveWeapon].m_Ammoregentime;
 	if(AmmoRegenTime && m_aWeapons[m_ActiveWeapon].m_Ammo >= 0)
@@ -446,6 +486,7 @@ void CCharacter::HandleWeapons()
 	}
 
 	return;
+	*/
 }
 
 bool CCharacter::GiveWeapon(int Weapon, int Ammo)
@@ -529,6 +570,104 @@ void CCharacter::Tick()
 	{
 		SetEmote(EMOTE_NORMAL, -1);
 	}
+
+	if(m_IsCaught)
+	{
+		m_IsVisible = true;
+		// TODO: Fake tuning
+		m_Input.m_Jump = 0;
+		m_Input.m_Hook = 0;
+		SetEmote(EMOTE_PAIN, Server()->Tick() + 1);
+	}
+	else if(m_pPlayer->GetTeam() == TEAM_RED)
+	{
+		bool Visible = false;
+		CCharacter *apEnts[MAX_PLAYERS];
+		float LightLength = 512.0f;
+		float Spreading = 0.355f;
+		int Num = GameWorld()->FindEntities(m_Pos, LightLength, (CEntity **) apEnts,
+			MAX_PLAYERS, CGameWorld::ENTTYPE_CHARACTER);
+
+		for(int i = 0; i < Num; ++i)
+		{
+			CCharacter *pChr = apEnts[i];
+			if(pChr == this || pChr->GetPlayer()->GetTeam() != TEAM_BLUE) continue;
+
+			vec2 Direction = pChr->GetDirection();
+			vec2 TargetDirection = normalize(m_Pos - pChr->GetPos());
+			if(acosf(dot(TargetDirection, Direction)) > Spreading)
+				continue;
+
+			vec2 StartPos = pChr->GetPos() + Direction * GetProximityRadius() * 0.75f;
+			if(!Visible && pChr->IsLighting())
+			{
+				if(!GameServer()->Collision()->IntersectLine(StartPos, m_Pos, nullptr, nullptr))
+					Visible = true;
+			}
+			if(pChr->IsGhostCleanerUsing())
+			{
+				BeDraging(pChr->m_Pos);
+				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 1.5f)
+				{
+					pChr->CatchGhost(this);
+					BeCaught(true);
+					break;
+				}
+			}
+		}
+		if(Server()->Tick() - m_LastVisibleTick < Server()->TickSpeed() * 2)
+		{
+			Visible = true;
+		}
+
+		if(!m_IsVisible && Visible)
+		{
+			GameServer()->CreatePlayerSpawn(m_Pos);
+			m_LastVisibleTick = Server()->Tick();
+		}
+		m_IsVisible = Visible;
+		SetEmote(m_IsVisible ? EMOTE_SURPRISE : EMOTE_BLINK, Server()->Tick() + 1);
+	}
+	else
+	{
+		if(m_HasFlashlight && m_ActiveWeapon == WEAPON_GUN)
+		{
+			m_aWeapons[WEAPON_GUN].m_Ammo = round_to_int(m_FlashlightPower / 450.f);
+			if(m_IsFlashlightOpened && m_FlashlightPower)
+			{
+				m_FlashlightPower--;
+				if(!m_FlashlightPower) // No power
+					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_ARMOR, CmaskOne(m_pPlayer->GetCID()));
+				else if(m_aWeapons[WEAPON_GUN].m_Ammo != round_to_int(m_FlashlightPower / 450.f))
+					GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, CmaskOne(m_pPlayer->GetCID()));
+			}
+		}
+
+		if(m_HasGhostCleaner && m_ActiveWeapon == WEAPON_GRENADE)
+		{
+			m_aWeapons[WEAPON_GRENADE].m_Ammo = round_to_int(m_GhostCleanerPower / 300.f);
+			if(m_GhostCleanerPower)
+			{
+				m_GhostCleanerPower -= m_IsGhostCleanerUsing ? 2 : 1;
+
+				if(!m_GhostCleanerPower) // No power
+					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_ARMOR, CmaskOne(m_pPlayer->GetCID()));
+				else if(m_aWeapons[WEAPON_GRENADE].m_Ammo != round_to_int(m_GhostCleanerPower / 300.f))
+					GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, CmaskOne(m_pPlayer->GetCID()));
+			}
+		}
+
+		for(auto& pGhost : m_vCaughtGhosts)
+		{
+			if(!pGhost)
+				continue;
+			pGhost->SetVel(m_Core.m_Vel);
+			pGhost->SetPos(m_Pos - vec2(sign(m_LatestInput.m_TargetX) * 32.f, 0.f));
+		}
+
+		m_IsVisible = true;
+	}
+	m_IsGhostCleanerUsing = false;
 
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
@@ -710,6 +849,13 @@ void CCharacter::Die(int Killer, int Weapon)
 	// this is for auto respawn after 3 secs
 	m_pPlayer->m_DieTick = Server()->Tick();
 
+	for(auto& pGhost : m_vCaughtGhosts)
+	{
+		if(!pGhost)
+			continue;
+		pGhost->BeCaught(false);
+	}
+
 	GameWorld()->RemoveEntity(this);
 	GameWorld()->m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
@@ -809,6 +955,61 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 
 void CCharacter::Snap(int SnappingClient)
 {
+	if(SnappingClient != -1 && !m_IsVisible)
+	{
+		if(GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_pPlayer->GetTeam())
+			return;
+	}
+
+	SnapCharacter(SnappingClient);
+
+	if(IsLighting())
+	{
+		float LightLength = 512.0f;
+		float Spreading[] = {-0.355f, 0.355f};
+		vec2 Direction = normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
+		vec2 StartPos = m_Pos + Direction * GetProximityRadius() * 0.75f;
+
+		for(int i = 0; i < 2; i++)
+		{
+			vec2 LightDir = direction(angle(Direction) + Spreading[i]);
+			vec2 EndPos = StartPos + LightDir  * LightLength;
+			GameServer()->Collision()->IntersectLine(StartPos, EndPos, nullptr, &EndPos);
+
+			if(NetworkClippedLine(SnappingClient, StartPos, EndPos))
+				continue;
+
+			CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aFlashlightIDs[i], sizeof(CNetObj_Laser)));
+			if(!pObj)
+				return;
+
+			pObj->m_X = round_to_int(StartPos.x);
+			pObj->m_Y = round_to_int(StartPos.y);
+			pObj->m_FromX = round_to_int(EndPos.x);
+			pObj->m_FromY = round_to_int(EndPos.y);
+			pObj->m_StartTick = Server()->Tick() - (int)((distance(StartPos, EndPos) / LightLength) * 4);
+		}
+	}
+
+	if(m_HasGhostCleaner)
+	{
+		CNetObj_Pickup *pObj = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, GetID(), sizeof(CNetObj_Pickup)));
+		if(!pObj)
+			return;
+
+		pObj->m_X = round_to_int(m_Pos.x - sign(m_LatestInput.m_TargetX) * 32.f);
+		pObj->m_Y = round_to_int(m_Pos.y);
+		pObj->m_Type = PICKUP_ARMOR;
+	}
+}
+
+void CCharacter::PostSnap()
+{
+	m_TriggeredEvents = 0;
+}
+
+void CCharacter::SnapCharacter(int SnappingClient)
+{
 	if(NetworkClippedLine(SnappingClient, m_Pos, m_Core.m_HookPos))
 		return;
 
@@ -860,7 +1061,71 @@ void CCharacter::Snap(int SnappingClient)
 	}
 }
 
-void CCharacter::PostSnap()
+void CCharacter::OnGhostDisconnected(CCharacter *pGhost)
 {
-	m_TriggeredEvents = 0;
+	auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pGhost);
+	if(Find == m_vCaughtGhosts.end())
+		return;
+	m_vCaughtGhosts.erase(Find);
+}
+
+vec2 CCharacter::GetDirection() const
+{
+	return normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
+}
+
+bool CCharacter::IsLighting()
+{
+	return (m_ActiveWeapon == WEAPON_GUN && m_HasFlashlight && m_IsFlashlightOpened && m_FlashlightPower) ||
+		 (m_ActiveWeapon == WEAPON_GRENADE && m_HasGhostCleaner && m_GhostCleanerPower);
+}
+
+void CCharacter::CatchGhost(CCharacter *pGhost)
+{
+	for(auto& pCaughtGhost : m_vCaughtGhosts)
+	{
+		if(pCaughtGhost == pGhost)
+			return;
+	}
+
+	m_vCaughtGhosts.push_back(pGhost);
+}
+
+void CCharacter::BeDraging(vec2 From)
+{
+	m_Core.m_Vel -= normalize(m_Pos - From) * 2.0f;
+	m_LastVisibleTick = Server()->Tick();
+}
+
+void CCharacter::BeCaught(bool Catch)
+{
+	m_IsCaught = Catch;
+}
+
+void CCharacter::SetFlashlight(bool Give)
+{
+	m_HasFlashlight = Give;
+	m_FlashlightPower = Give ? 4500 : 0;
+}
+
+void CCharacter::SetGhostCleaner(bool Give)
+{
+	m_HasGhostCleaner = Give;
+	m_GhostCleanerPower = Give ? 3000 : 0;
+}
+
+void CCharacter::SetPos(vec2 Pos)
+{
+	m_Core.m_Pos = Pos;
+	m_Pos = Pos;
+}
+
+void CCharacter::SetVel(vec2 Vel)
+{
+	m_Core.m_Vel = Vel;
+}
+
+void CCharacter::ClearCaughtList()
+{
+	m_vCaughtGhosts.clear();
 }
