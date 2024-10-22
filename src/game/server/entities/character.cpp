@@ -85,6 +85,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_Core.m_Pos = m_Pos;
 	GameWorld()->m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
 
+	m_EscapingFrozenTick = -1;
 	m_ReckoningTick = 0;
 	mem_zero(&m_SendCore, sizeof(m_SendCore));
 	mem_zero(&m_ReckoningCore, sizeof(m_ReckoningCore));
@@ -322,9 +323,14 @@ void CCharacter::FireWeapon()
 
 			if((pTarget == this) || GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, nullptr, nullptr))
 				continue;
-			// the ghosts can't be hit
+			// the free ghosts can't be hit
 			if(pTarget->GetPlayer()->GetTeam() == TEAM_RED)
-				continue;
+			{
+				auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pTarget);
+				if(Find == m_vCaughtGhosts.end())
+					continue;
+				pTarget->AddEscapeProgress(-2);
+			}
 
 			// set his velocity to fast upward (for now)
 			if(length(pTarget->m_Pos - ProjStartPos) > 0.0f)
@@ -337,6 +343,9 @@ void CCharacter::FireWeapon()
 				Dir = normalize(pTarget->m_Pos - m_Pos);
 			else
 				Dir = vec2(0.f, -1.f);
+			// the ghosts can't be damaged
+			if(pTarget->GetPlayer()->GetTeam() == TEAM_RED)
+				continue;
 
 			pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir * -1, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
 				m_pPlayer->GetCID(), m_ActiveWeapon);
@@ -574,9 +583,25 @@ void CCharacter::Tick()
 	if(m_IsCaught)
 	{
 		m_IsVisible = true;
+
+		if(!IsEscapingFrozen() && m_Input.m_Jump && !(m_Core.m_Jumped & 1) && random_int(0, 10) < 1)
+		{
+			AddEscapeProgress(random_int(1, 3));
+
+			if(GetEscapeProgress() == 20)
+			{
+				m_pHunter->OnCharacterDeadOrEscaped(this);
+				GameServer()->CreateSound(m_Pos, SOUND_CTF_GRAB_EN);
+				BeCaught(nullptr, false);
+			}
+			else
+			{
+				GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH);
+			}
+		}
 		// TODO: Fake tuning
-		m_Input.m_Jump = 0;
 		m_Input.m_Hook = 0;
+		m_Core.m_Jumped &= ~2;
 		SetEmote(EMOTE_PAIN, Server()->Tick() + 1);
 	}
 	else if(m_pPlayer->GetTeam() == TEAM_RED)
@@ -591,7 +616,8 @@ void CCharacter::Tick()
 		for(int i = 0; i < Num; ++i)
 		{
 			CCharacter *pChr = apEnts[i];
-			if(pChr == this || pChr->GetPlayer()->GetTeam() != TEAM_BLUE) continue;
+			if(pChr == this || pChr->GetPlayer()->GetTeam() != TEAM_BLUE)
+				continue;
 
 			vec2 Direction = pChr->GetDirection();
 			vec2 TargetDirection = normalize(m_Pos - pChr->GetPos());
@@ -609,8 +635,9 @@ void CCharacter::Tick()
 				BeDraging(pChr->m_Pos);
 				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 1.5f)
 				{
+					GameServer()->CreateSound(m_Pos, SOUND_CTF_RETURN);
 					pChr->CatchGhost(this);
-					BeCaught(true);
+					BeCaught(pChr, true);
 					break;
 				}
 			}
@@ -657,12 +684,12 @@ void CCharacter::Tick()
 			}
 		}
 
-		for(auto& pGhost : m_vCaughtGhosts)
+		for(auto &pGhost : m_vCaughtGhosts)
 		{
 			if(!pGhost)
 				continue;
 			pGhost->SetVel(m_Core.m_Vel);
-			pGhost->SetPos(m_Pos - vec2(sign(m_LatestInput.m_TargetX) * 32.f, 0.f));
+			pGhost->SetPos(m_Pos + vec2(sign(m_LatestInput.m_TargetX) * (m_ActiveWeapon == WEAPON_HAMMER ? 32.f : -32.f), 0.f));
 		}
 
 		m_IsVisible = true;
@@ -849,11 +876,11 @@ void CCharacter::Die(int Killer, int Weapon)
 	// this is for auto respawn after 3 secs
 	m_pPlayer->m_DieTick = Server()->Tick();
 
-	for(auto& pGhost : m_vCaughtGhosts)
+	for(auto &pGhost : m_vCaughtGhosts)
 	{
 		if(!pGhost)
 			continue;
-		pGhost->BeCaught(false);
+		pGhost->BeCaught(nullptr, false);
 	}
 
 	GameWorld()->RemoveEntity(this);
@@ -973,7 +1000,7 @@ void CCharacter::Snap(int SnappingClient)
 		for(int i = 0; i < 2; i++)
 		{
 			vec2 LightDir = direction(angle(Direction) + Spreading[i]);
-			vec2 EndPos = StartPos + LightDir  * LightLength;
+			vec2 EndPos = StartPos + LightDir * LightLength;
 			GameServer()->Collision()->IntersectLine(StartPos, EndPos, nullptr, &EndPos);
 
 			if(NetworkClippedLine(SnappingClient, StartPos, EndPos))
@@ -987,7 +1014,7 @@ void CCharacter::Snap(int SnappingClient)
 			pObj->m_Y = round_to_int(StartPos.y);
 			pObj->m_FromX = round_to_int(EndPos.x);
 			pObj->m_FromY = round_to_int(EndPos.y);
-			pObj->m_StartTick = Server()->Tick() - (int)((distance(StartPos, EndPos) / LightLength) * 4);
+			pObj->m_StartTick = Server()->Tick() - (int) ((distance(StartPos, EndPos) / LightLength) * 4);
 		}
 	}
 
@@ -997,7 +1024,7 @@ void CCharacter::Snap(int SnappingClient)
 		if(!pObj)
 			return;
 
-		pObj->m_X = round_to_int(m_Pos.x - sign(m_LatestInput.m_TargetX) * 32.f);
+		pObj->m_X = round_to_int(m_Pos.x + sign(m_LatestInput.m_TargetX) * (m_ActiveWeapon == WEAPON_HAMMER ? 32.f : -32.f));
 		pObj->m_Y = round_to_int(m_Pos.y);
 		pObj->m_Type = PICKUP_ARMOR;
 	}
@@ -1038,7 +1065,7 @@ void CCharacter::SnapCharacter(int SnappingClient)
 	pCharacter->m_Armor = 0;
 	pCharacter->m_TriggeredEvents = m_TriggeredEvents;
 
-	pCharacter->m_Weapon = m_ActiveWeapon;
+	pCharacter->m_Weapon = IsEscapingFrozen() ? WEAPON_NINJA : m_ActiveWeapon;
 	pCharacter->m_AttackTick = m_AttackTick;
 
 	pCharacter->m_Direction = m_Input.m_Direction;
@@ -1046,8 +1073,8 @@ void CCharacter::SnapCharacter(int SnappingClient)
 	if(m_pPlayer->GetCID() == SnappingClient || SnappingClient == -1 ||
 		(!Config()->m_SvStrictSpectateMode && m_pPlayer->GetCID() == GameServer()->m_apPlayers[SnappingClient]->GetSpectatorID()))
 	{
-		pCharacter->m_Health = m_Health;
-		pCharacter->m_Armor = m_Armor;
+		pCharacter->m_Health = m_IsCaught ? clamp(m_EscapeProgress, 0, 10) : m_Health;
+		pCharacter->m_Armor = m_IsCaught ? clamp(m_EscapeProgress - 10, 0, 10) : m_Armor;
 		if(m_ActiveWeapon == WEAPON_NINJA)
 			pCharacter->m_AmmoCount = m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
 		else if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0)
@@ -1061,9 +1088,12 @@ void CCharacter::SnapCharacter(int SnappingClient)
 	}
 }
 
-void CCharacter::OnGhostDisconnected(CCharacter *pGhost)
+void CCharacter::OnCharacterDeadOrEscaped(CCharacter *pChr)
 {
-	auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pGhost);
+	if(m_pHunter == pChr)
+		BeCaught(nullptr, false);
+
+	auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pChr);
 	if(Find == m_vCaughtGhosts.end())
 		return;
 	m_vCaughtGhosts.erase(Find);
@@ -1074,15 +1104,31 @@ vec2 CCharacter::GetDirection() const
 	return normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
 }
 
+bool CCharacter::IsEscapingFrozen()
+{
+	return m_EscapingFrozenTick > -1 && Server()->Tick() - m_EscapingFrozenTick < 5 * Server()->TickSpeed();
+}
+
 bool CCharacter::IsLighting()
 {
 	return (m_ActiveWeapon == WEAPON_GUN && m_HasFlashlight && m_IsFlashlightOpened && m_FlashlightPower) ||
-		 (m_ActiveWeapon == WEAPON_GRENADE && m_HasGhostCleaner && m_GhostCleanerPower);
+	       (m_ActiveWeapon == WEAPON_GRENADE && m_HasGhostCleaner && m_GhostCleanerPower);
+}
+
+void CCharacter::AddEscapeProgress(int Progress)
+{
+	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 0)
+	{
+		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
+		m_EscapingFrozenTick = Server()->Tick();
+	}
+
+	m_EscapeProgress = clamp(m_EscapeProgress + Progress, 0, 20);
 }
 
 void CCharacter::CatchGhost(CCharacter *pGhost)
 {
-	for(auto& pCaughtGhost : m_vCaughtGhosts)
+	for(auto &pCaughtGhost : m_vCaughtGhosts)
 	{
 		if(pCaughtGhost == pGhost)
 			return;
@@ -1097,9 +1143,14 @@ void CCharacter::BeDraging(vec2 From)
 	m_LastVisibleTick = Server()->Tick();
 }
 
-void CCharacter::BeCaught(bool Catch)
+void CCharacter::BeCaught(CCharacter *pHunter, bool Catch)
 {
+	m_pHunter = pHunter;
 	m_IsCaught = Catch;
+	m_EscapeProgress = 0;
+
+	if(Catch)
+		m_EscapingFrozenTick = Server()->Tick();
 }
 
 void CCharacter::SetFlashlight(bool Give)

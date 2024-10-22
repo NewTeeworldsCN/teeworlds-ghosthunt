@@ -3,7 +3,8 @@
 #ifndef BASE_MATH_H
 #define BASE_MATH_H
 
-#include <stdlib.h>
+#include <cstdlib>
+#include <random>
 
 template<typename T>
 inline T clamp(T val, T min, T max)
@@ -47,14 +48,24 @@ inline T bezier(const T p0, const T p1, const T p2, const T p3, TB amount)
 	return mix(c20, c21, amount); // c30
 }
 
+static std::random_device random_device;
+static std::mt19937 random_engine(random_device());
+
 inline int random_int()
 {
-	return ((rand() & 0x7fff) << 16) | (rand() & 0xffff);
+	std::uniform_int_distribution distribution(0, RAND_MAX);
+	return distribution(random_engine);
+}
+
+// not include the 'max'
+inline int random_int(int min, int max)
+{
+	return random_int() % (max - min) + min;
 }
 
 inline float random_float()
 {
-	return rand() / (float) RAND_MAX;
+	return random_int() / (float) RAND_MAX;
 }
 
 const int fxpscale = 1 << 10;

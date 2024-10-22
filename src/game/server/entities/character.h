@@ -65,7 +65,8 @@ public:
 	bool IsAlive() const { return m_Alive; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 
-	void OnGhostDisconnected(CCharacter *pGhost);
+	void OnCharacterDeadOrEscaped(CCharacter *pChr);
+
 private:
 	void SnapCharacter(int SnappingClient);
 	// player controlling this character
@@ -130,22 +131,33 @@ private:
 	CCharacterCore m_SendCore; // core that we should send
 	CCharacterCore m_ReckoningCore; // the dead reckoning core
 
+	// Human
 	bool m_HasFlashlight;
 	bool m_HasGhostCleaner;
 
 	bool m_IsFlashlightOpened;
 	bool m_IsGhostCleanerUsing;
+	// Ghost
 	bool m_IsVisible;
 	bool m_IsCaught;
 
+	// Human
 	int m_FlashlightPower;
 	int m_GhostCleanerPower;
 
+	// Human
 	int m_aFlashlightIDs[2];
 
+	// Ghost
 	int m_LastVisibleTick;
 
+	// Ghost
+	int m_EscapeProgress;
+	int m_EscapingFrozenTick;
+
+	CCharacter *m_pHunter;
 	std::vector<CCharacter *> m_vCaughtGhosts;
+
 public:
 	inline bool HasFlashlight() { return m_HasFlashlight; }
 	inline bool HasGhostCleaner() { return m_HasGhostCleaner; }
@@ -155,6 +167,7 @@ public:
 	inline bool IsVisible() { return m_IsVisible; }
 	inline bool IsCaught() { return m_IsCaught; }
 
+	int GetEscapeProgress() const { return m_EscapeProgress; }
 	int GetFlashlightPower() const { return m_FlashlightPower; }
 	int GetGhostCleanerPower() const { return m_GhostCleanerPower; }
 
@@ -164,11 +177,13 @@ public:
 
 	vec2 GetDirection() const;
 
+	bool IsEscapingFrozen();
 	bool IsLighting();
 
+	void AddEscapeProgress(int Progress);
 	void CatchGhost(CCharacter *pGhost);
 	void BeDraging(vec2 From);
-	void BeCaught(bool Catch);
+	void BeCaught(CCharacter *pHunter, bool Catch);
 	void SetFlashlight(bool Give);
 	void SetGhostCleaner(bool Give);
 

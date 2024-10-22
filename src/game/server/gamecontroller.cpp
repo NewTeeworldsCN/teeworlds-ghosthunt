@@ -156,20 +156,20 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	case ENTITY_HEALTH_1:
 		Type = PICKUP_HEALTH;
 		break;
-	/*
-	case ENTITY_WEAPON_SHOTGUN:
-		Type = PICKUP_SHOTGUN;
-		break;
-	case ENTITY_WEAPON_GRENADE:
-		Type = PICKUP_GRENADE;
-		break;
-	case ENTITY_WEAPON_LASER:
-		Type = PICKUP_LASER;
-		break;
-	case ENTITY_POWERUP_NINJA:
-		Type = PICKUP_NINJA;
-		break;
-	*/
+		/*
+		case ENTITY_WEAPON_SHOTGUN:
+			Type = PICKUP_SHOTGUN;
+			break;
+		case ENTITY_WEAPON_GRENADE:
+			Type = PICKUP_GRENADE;
+			break;
+		case ENTITY_WEAPON_LASER:
+			Type = PICKUP_LASER;
+			break;
+		case ENTITY_POWERUP_NINJA:
+			Type = PICKUP_NINJA;
+			break;
+		*/
 	}
 
 	if(Type != -1)

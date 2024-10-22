@@ -187,7 +187,7 @@ void CPlayer::OnDisconnect()
 			}
 			if(m_Team == TEAM_RED && m_pCharacter && m_pCharacter->IsAlive() && GameServer()->GetPlayerChar(i))
 			{
-				GameServer()->GetPlayerChar(i)->OnGhostDisconnected(m_pCharacter);
+				GameServer()->GetPlayerChar(i)->OnCharacterDeadOrEscaped(m_pCharacter);
 			}
 		}
 	}
