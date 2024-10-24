@@ -604,6 +604,8 @@ void CCharacter::Tick()
 			{
 				m_pHunter->OnCharacterDeadOrEscaped(this);
 				GameServer()->CreateSound(m_Pos, SOUND_CTF_GRAB_EN);
+				if(GameServer()->Collision()->TestBox(m_Pos, vec2(GetProximityRadius(), GetProximityRadius())))
+					SetPos(m_pHunter->GetPos());
 				BeCaught(nullptr, false);
 			}
 			else if(GetEscapeProgress() > 15)

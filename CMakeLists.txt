@@ -453,24 +453,7 @@ endif()
 
 set(EXPECTED_DATA
   mapres/createdir.txt
-  maps/ctf1.map
-  maps/ctf2.map
-  maps/ctf3.map
-  maps/ctf4.map
-  maps/ctf5.map
-  maps/ctf6.map
-  maps/ctf7.map
-  maps/ctf8.map
-  maps/dm1.map
-  maps/dm2.map
-  maps/dm3.map
-  maps/dm6.map
-  maps/dm7.map
-  maps/dm8.map
-  maps/dm9.map
-  maps/license.txt
-  maps/lms1.map
-  maps/readme.txt
+  maps/ghost_dm2.map
 )
 
 set_glob(DATA GLOB_RECURSE "json;map;png;rules;ttc;ttf;txt;wv" data ${EXPECTED_DATA})
