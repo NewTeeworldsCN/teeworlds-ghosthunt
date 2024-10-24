@@ -584,7 +584,7 @@ void CCharacter::Tick()
 	{
 		m_IsVisible = true;
 
-		if(!IsEscapingFrozen() && m_Input.m_Jump && !(m_Core.m_Jumped & 1) && random_int(0, 10) < 1)
+		if(!IsEscapingFrozen() && m_Input.m_Jump && !(m_Core.m_Jumped & 1) && random_int(0, 6) < 1)
 		{
 			AddEscapeProgress(random_int(1, 3));
 
@@ -594,11 +594,12 @@ void CCharacter::Tick()
 				GameServer()->CreateSound(m_Pos, SOUND_CTF_GRAB_EN);
 				BeCaught(nullptr, false);
 			}
-			else
+			else if(GetEscapeProgress() > 15)
 			{
 				GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH);
 			}
 		}
+		m_pPlayer->m_LastKillTick = Server()->Tick();
 		// TODO: Fake tuning
 		m_Input.m_Hook = 0;
 		m_Core.m_Jumped &= ~2;
@@ -632,6 +633,13 @@ void CCharacter::Tick()
 			}
 			if(pChr->IsGhostCleanerUsing())
 			{
+				pChr->SetEmote(EMOTE_HAPPY, Server()->Tick() + 1);
+				if(!m_pPlayer->m_LastEmoteTick || m_pPlayer->m_LastEmoteTick + Server()->TickSpeed() * 3 < Server()->Tick())
+				{
+					m_pPlayer->m_LastEmoteTick = Server()->Tick();
+					GameServer()->SendEmoticon(m_pPlayer->GetCID(), EMOTICON_OOP);
+				}
+
 				BeDraging(pChr->m_Pos);
 				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 1.5f)
 				{
