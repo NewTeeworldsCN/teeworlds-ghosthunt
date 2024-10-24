@@ -85,6 +85,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_Core.m_Pos = m_Pos;
 	GameWorld()->m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
 
+	m_SurpriseFrozenTick = -1;
 	m_EscapingFrozenTick = -1;
 	m_ReckoningTick = 0;
 	mem_zero(&m_SendCore, sizeof(m_SendCore));
@@ -533,6 +534,12 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 	if(mem_comp(&m_Input, pNewInput, sizeof(CNetObj_PlayerInput)) != 0)
 		m_LastAction = Server()->Tick();
 
+	if(IsSurpriseFrozen())
+	{
+		m_NumInputs++;
+		return;
+	}
+
 	// copy new input
 	mem_copy(&m_Input, pNewInput, sizeof(m_Input));
 	m_NumInputs++;
@@ -544,6 +551,11 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 
 void CCharacter::OnDirectInput(CNetObj_PlayerInput *pNewInput)
 {
+	if(IsSurpriseFrozen())
+	{
+		return;
+	}
+
 	mem_copy(&m_LatestPrevInput, &m_LatestInput, sizeof(m_LatestInput));
 	mem_copy(&m_LatestInput, pNewInput, sizeof(m_LatestInput));
 
@@ -601,7 +613,7 @@ void CCharacter::Tick()
 		}
 		m_pPlayer->m_LastKillTick = Server()->Tick();
 		// TODO: Fake tuning
-		m_Input.m_Hook = 0;
+		m_Core.m_HookPos = m_Pos;
 		m_Core.m_Jumped &= ~2;
 		SetEmote(EMOTE_PAIN, Server()->Tick() + 1);
 	}
@@ -904,6 +916,11 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 	{
 		if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From))
 			return false;
+		// oh no! too surprise!
+		if(m_pPlayer->GetTeam() == TEAM_BLUE && GameServer()->m_apPlayers[From]->GetTeam() == TEAM_RED)
+		{
+			m_SurpriseFrozenTick = Server()->Tick();
+		}
 	}
 	else
 	{
@@ -1110,6 +1127,11 @@ void CCharacter::OnCharacterDeadOrEscaped(CCharacter *pChr)
 vec2 CCharacter::GetDirection() const
 {
 	return normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
+}
+
+bool CCharacter::IsSurpriseFrozen()
+{
+	return m_SurpriseFrozenTick > -1 && Server()->Tick() - m_SurpriseFrozenTick < Server()->TickSpeed() / 10;
 }
 
 bool CCharacter::IsEscapingFrozen()

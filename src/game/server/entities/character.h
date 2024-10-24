@@ -147,6 +147,7 @@ private:
 
 	// Human
 	int m_aFlashlightIDs[2];
+	int m_SurpriseFrozenTick;
 
 	// Ghost
 	int m_LastVisibleTick;
@@ -177,6 +178,7 @@ public:
 
 	vec2 GetDirection() const;
 
+	bool IsSurpriseFrozen();
 	bool IsEscapingFrozen();
 	bool IsLighting();
 
