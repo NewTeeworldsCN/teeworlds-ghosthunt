@@ -397,6 +397,8 @@ bool CGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam) const
 {
 	if(JoinTeam == TEAM_SPECTATORS)
 		return true;
+	if(JoinTeam == TEAM_BLUE)
+		return false;
 
 	return true;
 }
