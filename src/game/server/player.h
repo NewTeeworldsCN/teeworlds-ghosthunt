@@ -76,6 +76,7 @@ public:
 	int m_LastEmoteTick;
 	int m_LastKillTick;
 	int m_LastReadyChangeTick;
+	int m_LastGameInformationTick;
 
 	// TODO: clean this up
 	struct

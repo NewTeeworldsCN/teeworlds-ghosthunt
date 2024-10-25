@@ -677,7 +677,7 @@ void CCharacter::Tick()
 		m_IsVisible = Visible;
 		SetEmote(m_IsVisible ? EMOTE_SURPRISE : EMOTE_BLINK, Server()->Tick() + 1);
 	}
-	else
+	else if(m_pPlayer->GetTeam() == TEAM_BLUE)
 	{
 		if(m_HasFlashlight && m_ActiveWeapon == WEAPON_GUN)
 		{
@@ -703,6 +703,47 @@ void CCharacter::Tick()
 					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_ARMOR, CmaskOne(m_pPlayer->GetCID()));
 				else if(m_aWeapons[WEAPON_GRENADE].m_Ammo != round_to_int(m_GhostCleanerPower / 300.f))
 					GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, CmaskOne(m_pPlayer->GetCID()));
+			}
+		}
+
+		// broadcast about export
+		if(GameServer()->Collision()->TestBox(m_Pos, vec2(GetProximityRadius(), GetProximityRadius()), CCollision::COLFLAG_EXPORT))
+		{
+			if(m_pPlayer->m_LastEmoteTick == Server()->Tick() - 1)
+			{
+				char aWithMsg[32];
+				if(m_vCaughtGhosts.empty())
+				{
+					str_copy(aWithMsg, "nothing", sizeof(aWithMsg));
+				}
+				else if(m_vCaughtGhosts.size() == 1)
+				{
+					str_copy(aWithMsg, "a ghost", sizeof(aWithMsg));
+				}
+				else if(m_vCaughtGhosts.size() > 1)
+				{
+					str_format(aWithMsg, sizeof(aWithMsg), "%lu ghost", m_vCaughtGhosts.size());
+				}
+				else
+				{
+					str_copy(aWithMsg, "error", sizeof(aWithMsg));
+				}
+
+				char aMsg[64];
+				str_format(aMsg, sizeof(aMsg), "'%s' has left with %s", Server()->ClientName(m_pPlayer->GetCID()), aWithMsg);
+				GameServer()->SendChat(-1, CHAT_ALL, -1, aMsg);
+				for(auto &pGhost : m_vCaughtGhosts)
+				{
+					pGhost->Die(m_pPlayer->GetCID(), WEAPON_GRENADE);
+				}
+				m_vCaughtGhosts.clear();
+				GameServer()->m_pController->DoTeamChange(m_pPlayer, TEAM_SPECTATORS, false);
+				return;
+			}
+			else if(!m_pPlayer->m_LastGameInformationTick || Server()->Tick() - m_pPlayer->m_LastGameInformationTick >= Server()->TickSpeed())
+			{
+				GameServer()->SendBroadcast("Send emoticon", m_pPlayer->GetCID());
+				m_pPlayer->m_LastGameInformationTick = Server()->Tick();
 			}
 		}
 
@@ -1115,17 +1156,6 @@ void CCharacter::SnapCharacter(int SnappingClient)
 	}
 }
 
-void CCharacter::OnCharacterDeadOrEscaped(CCharacter *pChr)
-{
-	if(m_pHunter == pChr)
-		BeCaught(nullptr, false);
-
-	auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pChr);
-	if(Find == m_vCaughtGhosts.end())
-		return;
-	m_vCaughtGhosts.erase(Find);
-}
-
 vec2 CCharacter::GetDirection() const
 {
 	return normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
@@ -1211,4 +1241,25 @@ void CCharacter::SetVel(vec2 Vel)
 void CCharacter::ClearCaughtList()
 {
 	m_vCaughtGhosts.clear();
+}
+
+void CCharacter::OnCharacterDeadOrEscaped(CCharacter *pChr)
+{
+	if(m_pHunter == pChr)
+		BeCaught(nullptr, false);
+
+	auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pChr);
+	if(Find == m_vCaughtGhosts.end())
+		return;
+	m_vCaughtGhosts.erase(Find);
+}
+
+void CCharacter::OnKilledByGhost(CPlayer *pGhost)
+{
+	if(!pGhost)
+		return;
+	if(m_pPlayer->GetTeam() == TEAM_RED)
+		return;
+
+	pGhost->m_Score += m_vCaughtGhosts.size() * 3; // rescue a ghost score +3
 }

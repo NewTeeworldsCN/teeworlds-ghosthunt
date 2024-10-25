@@ -65,8 +65,6 @@ public:
 	bool IsAlive() const { return m_Alive; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 
-	void OnCharacterDeadOrEscaped(CCharacter *pChr);
-
 private:
 	void SnapCharacter(int SnappingClient);
 	// player controlling this character
@@ -193,6 +191,9 @@ public:
 	void SetVel(vec2 Vel);
 
 	void ClearCaughtList();
+
+	void OnCharacterDeadOrEscaped(CCharacter *pChr);
+	void OnKilledByGhost(CPlayer *pGhost);
 };
 
 #endif

@@ -92,7 +92,15 @@ int CGameController::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int
 		pVictim->GetPlayer()->m_Score--; // suicide or world
 	else
 	{
-		pKiller->m_Score++; // normal kill
+		if(pKiller->GetTeam() == TEAM_BLUE)
+		{
+			pKiller->m_Score += 4; // caught a ghost score +4
+		}
+		else if(pKiller->GetTeam() == TEAM_RED)
+		{
+			pKiller->m_Score += 3; // kill a human score +3
+			pVictim->OnKilledByGhost(pKiller); // and extra score
+		}
 	}
 	if(Weapon == WEAPON_SELF)
 		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick() + Server()->TickSpeed() * 3.0f;
@@ -331,9 +339,17 @@ bool CGameController::CanSpawn(int Team, vec2 *pOutPos) const
 	CSpawnEval Eval;
 	Eval.m_RandomSpawn = false;
 
-	EvaluateSpawnType(&Eval, 0);
-	EvaluateSpawnType(&Eval, 1);
-	EvaluateSpawnType(&Eval, 2);
+	if(IsTeamplay())
+	{
+		EvaluateSpawnType(&Eval, 0);
+		EvaluateSpawnType(&Eval, Team + 1);
+	}
+	else
+	{
+		EvaluateSpawnType(&Eval, 0);
+		EvaluateSpawnType(&Eval, 1);
+		EvaluateSpawnType(&Eval, 2);
+	}
 
 	*pOutPos = Eval.m_Pos;
 	return Eval.m_Got;
