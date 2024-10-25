@@ -411,6 +411,12 @@ void CGameController::EvaluateSpawnType(CSpawnEval *pEval, int Type) const
 // team
 bool CGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam) const
 {
+	if(pPlayer->GetTeam() == TEAM_RED && pPlayer->GetCharacter())
+	{
+		if(pPlayer->GetCharacter()->IsCaught())
+			return false; // I don't think this should be allowed.
+	}
+
 	if(JoinTeam == TEAM_SPECTATORS)
 		return true;
 	if(JoinTeam == TEAM_BLUE)
