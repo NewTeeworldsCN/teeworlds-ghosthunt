@@ -1261,8 +1261,6 @@ void CCharacter::OnKilledByGhost(CPlayer *pGhost)
 {
 	if(!pGhost)
 		return;
-	if(m_pPlayer->GetTeam() == TEAM_RED)
-		return;
 
 	pGhost->m_Score += m_vCaughtGhosts.size() * 3; // rescue a ghost score +3
 }
