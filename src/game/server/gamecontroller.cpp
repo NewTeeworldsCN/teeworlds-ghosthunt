@@ -311,11 +311,8 @@ void CGameController::Tick()
 			GameServer()->m_World.m_Paused = true;
 			return;
 		}
-		else
-		{
-			m_GameEndTick = -1;
-			m_GameStarted = false;
-		}
+		m_GameEndTick = -1;
+		m_GameStarted = false;
 	}
 
 	if(m_GamePreparing)
@@ -506,7 +503,7 @@ int CGameController::ClampTeam(int Team) const
 {
 	if(Team < TEAM_RED)
 		return TEAM_SPECTATORS;
-	return TEAM_RED;
+	return Team ? TEAM_BLUE : TEAM_RED;
 }
 
 void CGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
