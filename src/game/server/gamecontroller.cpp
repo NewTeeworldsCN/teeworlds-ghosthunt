@@ -352,7 +352,7 @@ void CGameController::Tick()
 			}
 		}
 
-		dbg_assert(vPlayers.size() >= Humans, "bad error: should find enough players but not found");
+		dbg_assert(vPlayers.size() >= (size_t) Humans, "bad error: should find enough players but not found");
 
 		for(int i = 0; i < Humans; i++)
 		{
