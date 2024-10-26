@@ -19,7 +19,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, bool Dummy, bool AsSpe
 	m_ScoreStartTick = Server()->Tick();
 	m_pCharacter = 0;
 	m_ClientID = ClientID;
-	m_Team = AsSpec ? TEAM_SPECTATORS : TEAM_BLUE;
+	m_Team = AsSpec ? TEAM_SPECTATORS : 0;
 	m_SpecMode = SPEC_FREEVIEW;
 	m_SpectatorID = -1;
 	m_ActiveSpecSwitch = 0;

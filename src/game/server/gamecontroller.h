@@ -58,10 +58,13 @@ protected:
 
 	// game
 	int m_GameStartTick;
+	int m_GameEndTick;
+	bool m_GamePreparing;
+	bool m_GameStarted;
 
 	// info
 	int m_GameFlags;
-	int m_RealPlayerNum;
+	int m_RealPlayerNum; // warning: includes spectators
 	int m_aTeamPlayersCount[NUM_TEAMS];
 	const char *m_pGameType;
 

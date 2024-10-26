@@ -10,6 +10,8 @@
 #include "gamecontroller.h"
 #include "player.h"
 
+#include <vector>
+
 CGameController::CGameController(CGameContext *pGameServer)
 {
 	m_pGameServer = pGameServer;
@@ -18,6 +20,7 @@ CGameController::CGameController(CGameContext *pGameServer)
 
 	// game
 	m_GameStartTick = Server()->Tick();
+	m_GameEndTick = Server()->Tick();
 
 	// info
 	m_GameFlags = GAMEFLAG_TEAMS;
@@ -268,7 +271,7 @@ void CGameController::Snap(int SnappingClient)
 		return;
 
 	pGameData->m_GameStartTick = m_GameStartTick;
-	pGameData->m_GameStateFlags = 0;
+	pGameData->m_GameStateFlags = m_GamePreparing ? GAMESTATEFLAG_WARMUP : 0;
 	pGameData->m_GameStateEndTick = 0; // no timer/infinite = 0, on end = GameEndTick, otherwise = GameStateEndTick
 
 	CNetObj_GameDataTeam *pGameDataTeam = static_cast<CNetObj_GameDataTeam *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATATEAM, 0, sizeof(CNetObj_GameDataTeam)));
@@ -297,6 +300,79 @@ void CGameController::Tick()
 {
 	// check for inactive players
 	DoActivityCheck();
+
+	int TotalPlayersNum = m_aTeamPlayersCount[TEAM_RED] + m_aTeamPlayersCount[TEAM_BLUE];
+	m_GamePreparing = TotalPlayersNum < 3;
+
+	if(m_GameEndTick > -1)
+	{
+		if(m_GameEndTick + Server()->TickSpeed() * 10 < Server()->Tick())
+		{
+			GameServer()->m_World.m_Paused = true;
+			return;
+		}
+		else
+		{
+			m_GameEndTick = -1;
+		}
+	}
+
+	if(m_GamePreparing)
+	{
+		if(m_GameStarted)
+		{
+			// clear humans
+			for(int i = 0; i < MAX_CLIENTS; i++)
+			{
+				if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() == TEAM_BLUE)
+					DoTeamChange(GameServer()->m_apPlayers[i], TEAM_RED, false);
+			}
+		}
+		m_GameStarted = false;
+		return;
+	}
+
+	// start game!
+	if(!m_GameStarted)
+	{
+		ResetGame();
+
+		GameServer()->SendChat(-1, CHAT_ALL, -1, "⚠|Ghost clean task: Start!");
+		// choose humans
+		int Humans = TotalPlayersNum / 3;
+		static std::vector<int> vPlayers;
+		vPlayers.clear();
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(GameServer()->m_apPlayers[i])
+			{
+				GameServer()->m_apPlayers[i]->KillCharacter();
+				if(GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
+					vPlayers.push_back(i);
+			}
+		}
+
+		dbg_assert(vPlayers.size() >= Humans, "bad error: should find enough players but not found");
+
+		for(int i = 0; i < Humans; i++)
+		{
+			int RandomIndex = random_int(0, vPlayers.size());
+			DoTeamChange(GameServer()->m_apPlayers[vPlayers[RandomIndex]], TEAM_BLUE, false);
+
+			// remove
+			vPlayers.erase(vPlayers.begin() + RandomIndex);
+		}
+
+		m_GameStarted = true;
+	}
+	else if(m_aTeamPlayersCount[TEAM_BLUE] == 0) // do win check
+	{
+		GameServer()->SendChat(-1, CHAT_ALL, -1, "All of the humans had escaped or been killed!");
+		GameServer()->SendChat(-1, CHAT_ALL, -1, "⚠|Ghost clean task: Finish!");
+
+		GameServer()->m_World.m_Paused = true;
+		m_GameEndTick = Server()->Tick();
+	}
 }
 
 void CGameController::SendGameInfo(int ClientID)
