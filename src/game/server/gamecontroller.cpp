@@ -260,6 +260,7 @@ void CGameController::ResetGame()
 {
 	// reset the game
 	GameServer()->m_World.m_ResetRequested = true;
+	GameServer()->m_World.m_Paused = false;
 	m_GameStartTick = Server()->Tick();
 }
 
