@@ -314,6 +314,7 @@ void CGameController::Tick()
 		else
 		{
 			m_GameEndTick = -1;
+			m_GameStarted = false;
 		}
 	}
 
