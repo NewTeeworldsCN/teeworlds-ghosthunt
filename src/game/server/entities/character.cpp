@@ -737,7 +737,7 @@ void CCharacter::Tick()
 					pGhost->Die(m_pPlayer->GetCID(), WEAPON_GRENADE);
 				}
 				m_vCaughtGhosts.clear();
-				GameServer()->m_pController->DoTeamChange(m_pPlayer, TEAM_SPECTATORS, false);
+				GameServer()->m_pController->DoTeamChange(m_pPlayer, TEAM_RED, false);
 				return;
 			}
 			else if(!m_pPlayer->m_LastGameInformationTick || Server()->Tick() - m_pPlayer->m_LastGameInformationTick >= Server()->TickSpeed())
@@ -1023,11 +1023,6 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 	// check for death
 	if(m_Health <= 0)
 	{
-		if(m_pPlayer->GetTeam() == TEAM_BLUE)
-			GameServer()->m_pController->DoTeamChange(m_pPlayer, TEAM_RED, false);
-		else
-			Die(From, Weapon);
-
 		// set attacker's face to happy (taunt!)
 		if(From >= 0 && From != m_pPlayer->GetCID() && GameServer()->m_apPlayers[From])
 		{
@@ -1037,6 +1032,11 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 				pChr->SetEmote(EMOTE_HAPPY, Server()->Tick() + Server()->TickSpeed());
 			}
 		}
+
+		if(m_pPlayer->GetTeam() == TEAM_BLUE)
+			GameServer()->m_pController->DoTeamChange(m_pPlayer, TEAM_RED, false);
+		else
+			Die(From, Weapon);
 
 		return false;
 	}
