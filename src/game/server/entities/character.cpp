@@ -655,7 +655,7 @@ void CCharacter::Tick()
 				}
 
 				BeDraging(pChr->m_Pos);
-				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 1.5f)
+				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 2)
 				{
 					GameServer()->CreateSound(m_Pos, SOUND_CTF_RETURN);
 					pChr->CatchGhost(this);
