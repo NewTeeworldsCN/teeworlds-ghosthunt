@@ -306,7 +306,7 @@ void CGameController::Tick()
 
 	if(m_GameEndTick > -1)
 	{
-		if(m_GameEndTick + Server()->TickSpeed() * 10 < Server()->Tick())
+		if(m_GameEndTick + Server()->TickSpeed() * 10 > Server()->Tick())
 		{
 			GameServer()->m_World.m_Paused = true;
 			return;
