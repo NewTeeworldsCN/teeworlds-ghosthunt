@@ -20,7 +20,7 @@ CGameController::CGameController(CGameContext *pGameServer)
 
 	// game
 	m_GameStartTick = Server()->Tick();
-	m_GameEndTick = Server()->Tick();
+	m_GameEndTick = -1;
 
 	// info
 	m_GameFlags = GAMEFLAG_TEAMS;
