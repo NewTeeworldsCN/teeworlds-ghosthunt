@@ -356,6 +356,8 @@ void CCharacter::FireWeapon()
 		// if we Hit anything, we have to wait for the reload
 		if(Hits)
 			m_ReloadTimer = Server()->TickSpeed() / 3;
+		if(m_pPlayer->GetTeam() == TEAM_BLUE)
+			m_ReloadTimer = Server()->TickSpeed();
 	}
 	break;
 
@@ -1206,7 +1208,7 @@ bool CCharacter::IsLighting()
 
 void CCharacter::AddEscapeProgress(int Progress)
 {
-	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 50)
+	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 24)
 	{
 		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
 		m_EscapingFrozenTick = Server()->Tick();
