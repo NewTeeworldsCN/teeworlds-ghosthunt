@@ -1208,7 +1208,7 @@ bool CCharacter::IsLighting()
 
 void CCharacter::AddEscapeProgress(int Progress)
 {
-	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 99)
+	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 50)
 	{
 		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
 		m_EscapingFrozenTick = Server()->Tick();
