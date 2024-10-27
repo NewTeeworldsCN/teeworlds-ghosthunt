@@ -211,6 +211,16 @@ void CGameController::OnPlayerConnect(CPlayer *pPlayer)
 
 void CGameController::OnPlayerDisconnect(CPlayer *pPlayer)
 {
+	if(pPlayer->GetTeam() == TEAM_RED && pPlayer->GetCharacter() && pPlayer->GetCharacter()->IsCaught())
+	{
+		char aAddr[NETADDR_MAXSTRSIZE];
+		Server()->GetClientAddr(pPlayer->GetCID(), aAddr, sizeof(aAddr));
+
+		char aCommand[128];
+		str_format(aCommand, sizeof(aCommand), "ban \"%s\" 5 \"Leaver Ghost\"", aAddr);
+		GameServer()->Console()->ExecuteLine(aCommand);
+	}
+
 	pPlayer->OnDisconnect();
 
 	m_RealPlayerNum--;
