@@ -334,7 +334,7 @@ void CCharacter::FireWeapon()
 				auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pTarget);
 				if(Find == m_vCaughtGhosts.end())
 					continue;
-				pTarget->AddEscapeProgress(-2);
+				pTarget->AddEscapeProgress(-25);
 			}
 
 			// set his velocity to fast upward (for now)
@@ -600,11 +600,11 @@ void CCharacter::Tick()
 	{
 		m_IsVisible = true;
 
-		if(!IsEscapingFrozen() && m_Input.m_Jump && !(m_Core.m_Jumped & 1) && random_int(0, 6) < 1)
+		if(!IsEscapingFrozen() && m_Input.m_Jump)
 		{
-			AddEscapeProgress(random_int(1, 3));
+			AddEscapeProgress(1);
 
-			if(GetEscapeProgress() == 20)
+			if(GetEscapeProgress() >= 500)
 			{
 				m_pHunter->OnCharacterDeadOrEscaped(this);
 				GameServer()->CreateSound(m_Pos, SOUND_CTF_GRAB_EN);
@@ -612,7 +612,7 @@ void CCharacter::Tick()
 					SetPos(m_pHunter->GetPos());
 				BeCaught(nullptr, false);
 			}
-			else if(GetEscapeProgress() > 15)
+			else if(GetEscapeProgress() > 380)
 			{
 				GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH);
 			}
@@ -1170,8 +1170,8 @@ void CCharacter::SnapCharacter(int SnappingClient)
 	if(m_pPlayer->GetCID() == SnappingClient || SnappingClient == -1 ||
 		(!Config()->m_SvStrictSpectateMode && m_pPlayer->GetCID() == GameServer()->m_apPlayers[SnappingClient]->GetSpectatorID()))
 	{
-		pCharacter->m_Health = m_IsCaught ? clamp(m_EscapeProgress, 0, 10) : m_Health;
-		pCharacter->m_Armor = m_IsCaught ? clamp(m_EscapeProgress - 10, 0, 10) : m_Armor;
+		pCharacter->m_Health = m_IsCaught ? clamp(m_EscapeProgress / 25, 0, 10) : m_Health;
+		pCharacter->m_Armor = m_IsCaught ? clamp(m_EscapeProgress / 25 - 10, 0, 10) : m_Armor;
 		if(m_ActiveWeapon == WEAPON_NINJA)
 			pCharacter->m_AmmoCount = m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
 		else if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0)
@@ -1208,13 +1208,13 @@ bool CCharacter::IsLighting()
 
 void CCharacter::AddEscapeProgress(int Progress)
 {
-	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 0)
+	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 50)
 	{
 		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
 		m_EscapingFrozenTick = Server()->Tick();
 	}
 
-	m_EscapeProgress = clamp(m_EscapeProgress + Progress, 0, 20);
+	m_EscapeProgress = clamp(m_EscapeProgress + Progress, 0, 500);
 }
 
 void CCharacter::CatchGhost(CCharacter *pGhost)
