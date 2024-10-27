@@ -663,7 +663,7 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	CServer *pThis = (CServer *) pUser;
 	// no more quitting
 	if(pThis->m_aClients[ClientID].m_Quitting)
-		return;
+		return 0;
 
 	char aAddrStr[NETADDR_MAXSTRSIZE];
 	net_addr_str(pThis->m_NetServer.ClientAddr(ClientID), aAddrStr, sizeof(aAddrStr), true);
