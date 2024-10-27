@@ -655,7 +655,7 @@ void CCharacter::Tick()
 				}
 
 				BeDraging(pChr->m_Pos);
-				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 2)
+				if(distance(StartPos, m_Pos) < GetProximityRadius() * 2)
 				{
 					if(m_Armor < 9) // be caught
 					{
