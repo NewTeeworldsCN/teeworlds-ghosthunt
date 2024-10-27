@@ -608,11 +608,13 @@ void CCharacter::Tick()
 					SetPos(m_pHunter->GetPos());
 				BeCaught(nullptr, false);
 			}
-			else if(GetEscapeProgress() > 380)
+			else if(GetEscapeProgress() > 380 && GetEscapeProgress() % 25 == 0)
 			{
 				GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH);
 			}
 		}
+		m_Input.m_Jump = 0;
+
 		m_pPlayer->m_LastKillTick = Server()->Tick();
 	}
 	else if(m_pPlayer->GetTeam() == TEAM_RED)
