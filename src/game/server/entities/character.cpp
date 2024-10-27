@@ -330,7 +330,7 @@ void CCharacter::FireWeapon()
 				auto Find = std::find(m_vCaughtGhosts.begin(), m_vCaughtGhosts.end(), pTarget);
 				if(Find == m_vCaughtGhosts.end())
 					continue;
-				pTarget->AddEscapeProgress(-25);
+				pTarget->AddEscapeProgress(-100);
 			}
 
 			// set his velocity to fast upward (for now)
@@ -1208,7 +1208,7 @@ bool CCharacter::IsLighting()
 
 void CCharacter::AddEscapeProgress(int Progress)
 {
-	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 24)
+	if(Progress < 0 && absolute(Progress) >= m_EscapeProgress && m_EscapeProgress > 99)
 	{
 		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG);
 		m_EscapingFrozenTick = Server()->Tick();
