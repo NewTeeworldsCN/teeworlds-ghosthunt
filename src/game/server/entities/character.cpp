@@ -318,6 +318,10 @@ void CCharacter::FireWeapon()
 		int Num = GameWorld()->FindEntities(ProjStartPos, GetProximityRadius() * 0.5f, (CEntity **) apEnts,
 			MAX_PLAYERS, CGameWorld::ENTTYPE_CHARACTER);
 
+		int Damage = g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage;
+		if(m_pPlayer->GetTeam() == TEAM_RED)
+			Damage *= 2;
+
 		for(int i = 0; i < Num; ++i)
 		{
 			CCharacter *pTarget = apEnts[i];
@@ -348,7 +352,7 @@ void CCharacter::FireWeapon()
 			if(pTarget->GetPlayer()->GetTeam() == TEAM_RED)
 				continue;
 
-			pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir * -1, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
+			pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir * -1, Damage,
 				m_pPlayer->GetCID(), m_ActiveWeapon);
 			Hits++;
 		}
@@ -614,10 +618,6 @@ void CCharacter::Tick()
 			}
 		}
 		m_pPlayer->m_LastKillTick = Server()->Tick();
-		// TODO: Fake tuning
-		m_Core.m_HookPos = m_Pos;
-		m_Core.m_Jumped &= ~2;
-		SetEmote(EMOTE_PAIN, Server()->Tick() + 1);
 	}
 	else if(m_pPlayer->GetTeam() == TEAM_RED)
 	{
@@ -782,6 +782,15 @@ void CCharacter::TickDefered()
 		m_ReckoningCore.Tick(false);
 		m_ReckoningCore.Move();
 		m_ReckoningCore.Quantize();
+	}
+
+	if(m_IsCaught)
+	{
+		// TODO: Fake tuning
+		m_Core.m_HookPos = m_Pos;
+		m_Core.m_Jumped &= ~2;
+		m_Core.m_Jumped &= ~1;
+		SetEmote(EMOTE_PAIN, Server()->Tick() + 1);
 	}
 
 	// apply drag velocity when the player is not firing ninja
@@ -1034,7 +1043,10 @@ bool CCharacter::TakeDamage(vec2 Force, vec2 Source, int Dmg, int From, int Weap
 		}
 
 		if(m_pPlayer->GetTeam() == TEAM_BLUE)
+		{
+			GameServer()->m_pController->OnCharacterDeath(this, (From < 0) ? nullptr : GameServer()->m_apPlayers[From], Weapon);
 			GameServer()->m_pController->DoTeamChange(m_pPlayer, TEAM_RED, false);
+		}
 		else
 			Die(From, Weapon);
 
