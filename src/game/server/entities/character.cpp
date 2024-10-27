@@ -598,7 +598,7 @@ void CCharacter::Tick()
 
 		if(!IsEscapingFrozen() && m_Input.m_Jump)
 		{
-			AddEscapeProgress(1);
+			AddEscapeProgress(random_int(1, 4));
 
 			if(GetEscapeProgress() >= 500)
 			{
