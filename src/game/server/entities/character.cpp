@@ -715,7 +715,7 @@ void CCharacter::Tick()
 
 				if(!m_GhostCleanerPower) // No power
 					GameServer()->CreateSound(m_Pos, SOUND_PICKUP_ARMOR, CmaskOne(m_pPlayer->GetCID()));
-				else if(m_aWeapons[WEAPON_GRENADE].m_Ammo != round_to_int(m_GhostCleanerPower / 300.f))
+				else if(m_aWeapons[WEAPON_GRENADE].m_Ammo != round_to_int(m_GhostCleanerPower / 100.f))
 					GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, CmaskOne(m_pPlayer->GetCID()));
 			}
 		}
