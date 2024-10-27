@@ -318,10 +318,6 @@ void CCharacter::FireWeapon()
 		int Num = GameWorld()->FindEntities(ProjStartPos, GetProximityRadius() * 0.5f, (CEntity **) apEnts,
 			MAX_PLAYERS, CGameWorld::ENTTYPE_CHARACTER);
 
-		int Damage = g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage;
-		if(m_pPlayer->GetTeam() == TEAM_RED)
-			Damage *= 2;
-
 		for(int i = 0; i < Num; ++i)
 		{
 			CCharacter *pTarget = apEnts[i];
@@ -352,7 +348,7 @@ void CCharacter::FireWeapon()
 			if(pTarget->GetPlayer()->GetTeam() == TEAM_RED)
 				continue;
 
-			pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir * -1, Damage,
+			pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, Dir * -1, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
 				m_pPlayer->GetCID(), m_ActiveWeapon);
 			Hits++;
 		}
