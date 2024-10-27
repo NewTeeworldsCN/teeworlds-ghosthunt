@@ -657,10 +657,24 @@ void CCharacter::Tick()
 				BeDraging(pChr->m_Pos);
 				if(distance(pChr->GetPos(), m_Pos) < GetProximityRadius() * 2)
 				{
-					GameServer()->CreateSound(m_Pos, SOUND_CTF_RETURN);
-					pChr->CatchGhost(this);
-					BeCaught(pChr, true);
-					break;
+					if(m_Armor < 9) // be caught
+					{
+						GameServer()->CreateSound(m_Pos, SOUND_CTF_RETURN);
+						pChr->CatchGhost(this);
+						BeCaught(pChr, true);
+						break;
+					}
+					else
+					{
+						GameServer()->CreateSound(m_Pos, SOUND_PICKUP_ARMOR);
+						GameServer()->CreateSound(m_Pos, SOUND_HIT);
+
+						SetVel(normalize(pChr->GetPos() - m_Pos) * 8.f);
+						pChr->SetVel(normalize(m_Pos - pChr->GetPos()) * 8.f);
+
+						TakeDamage(vec2(0.f, 0.f), vec2(0.f, 0.f), 10, m_pPlayer->GetCID(), WEAPON_NINJA);
+						pChr->TakeDamage(vec2(0.f, 0.f), vec2(0.f, 0.f), 2, m_pPlayer->GetCID(), WEAPON_NINJA);
+					}
 				}
 			}
 		}
@@ -1067,7 +1081,7 @@ void CCharacter::Snap(int SnappingClient)
 {
 	if(SnappingClient != -1 && !m_IsVisible)
 	{
-		if(GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_pPlayer->GetTeam())
+		if(GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_pPlayer->GetTeam() && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != TEAM_SPECTATORS)
 			return;
 	}
 
@@ -1239,7 +1253,7 @@ void CCharacter::SetFlashlight(bool Give)
 void CCharacter::SetGhostCleaner(bool Give)
 {
 	m_HasGhostCleaner = Give;
-	m_GhostCleanerPower = Give ? 3000 : 0;
+	m_GhostCleanerPower = Give ? 1500 : 0;
 }
 
 void CCharacter::SetPos(vec2 Pos)
