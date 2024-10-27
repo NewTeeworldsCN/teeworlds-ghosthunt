@@ -708,7 +708,7 @@ void CCharacter::Tick()
 
 		if(m_HasGhostCleaner && m_ActiveWeapon == WEAPON_GRENADE)
 		{
-			m_aWeapons[WEAPON_GRENADE].m_Ammo = round_to_int(m_GhostCleanerPower / 300.f);
+			m_aWeapons[WEAPON_GRENADE].m_Ammo = round_to_int(m_GhostCleanerPower / 100.f);
 			if(m_GhostCleanerPower)
 			{
 				m_GhostCleanerPower -= m_IsGhostCleanerUsing ? 2 : 1;
