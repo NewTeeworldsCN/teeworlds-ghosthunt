@@ -180,8 +180,8 @@ public:
 
 	void Init(CWorldCore *pWorld, CCollision *pCollision);
 	void Reset();
-	void Tick(bool UseInput);
-	void Move();
+	void Tick(bool UseInput, bool PhysicLayer = true);
+	void Move(bool PhysicLayer = true);
 
 	void AddDragVelocity();
 	void ResetDragVelocity();

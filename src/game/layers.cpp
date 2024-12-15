@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include "gamecore.h"
 #include "layers.h"
 
 CLayers::CLayers()
@@ -8,9 +9,10 @@ CLayers::CLayers()
 	m_GroupsStart = 0;
 	m_LayersNum = 0;
 	m_LayersStart = 0;
-	m_pGameGroup = 0;
-	m_pGameLayer = 0;
-	m_pMap = 0;
+	m_pGameGroup = nullptr;
+	m_pGameLayer = nullptr;
+	m_pPhysicalLayer = nullptr;
+	m_pMap = nullptr;
 }
 
 void CLayers::Init(class IKernel *pKernel, IMap *pMap)
@@ -34,7 +36,7 @@ void CLayers::InitGameLayer()
 			if(pLayer->m_Type == LAYERTYPE_TILES)
 			{
 				CMapItemLayerTilemap *pTilemap = reinterpret_cast<CMapItemLayerTilemap *>(pLayer);
-				if(pTilemap->m_Flags & TILESLAYERFLAG_GAME)
+				if(pTilemap->m_Flags & TILESLAYERFLAG_GAME && !m_pGameLayer)
 				{
 					m_pGameLayer = pTilemap;
 					m_pGameGroup = pGroup;
@@ -53,8 +55,16 @@ void CLayers::InitGameLayer()
 						m_pGameGroup->m_ClipW = 0;
 						m_pGameGroup->m_ClipH = 0;
 					}
-
-					return; // there can only be one game layer and game group
+				}
+			}
+			if(pLayer->m_Type == LAYERTYPE_QUADS)
+			{
+				CMapItemLayerQuads *pQuadsLayer = reinterpret_cast<CMapItemLayerQuads *>(pLayer);
+				char aLayerName[12];
+				IntsToStr(pQuadsLayer->m_aName, sizeof(aLayerName) / sizeof(int), aLayerName);
+				if(str_comp(aLayerName, "#Physic") == 0 && !m_pPhysicalLayer && pGroup == m_pGameGroup)
+				{
+					m_pPhysicalLayer = pQuadsLayer;
 				}
 			}
 		}
