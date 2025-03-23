@@ -295,6 +295,7 @@ find_package(Crypto)
 find_package(Git)
 find_package(GTest)
 find_package(Threads)
+find_package(Curl)
 
 
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
@@ -334,6 +335,7 @@ function(show_dependency_status OUTPUT_NAME NAME)
   endif()
 endfunction()
 
+show_dependency_status("Curl" CURL)
 if(TARGET_OS AND TARGET_OS STREQUAL "mac")
   show_dependency_status("Dmg tools" DMGTOOLS)
 endif()
@@ -344,6 +346,9 @@ show_dependency_status("OpenSSL Crypto" CRYPTO)
 show_dependency_status("Python3" Python3)
 show_dependency_status("Zlib" ZLIB)
 
+if(NOT(CURL_FOUND))
+  message(SEND_ERROR "You must install Curl to compile Teeworlds GhostHunt")
+endif()
 if(NOT(Python3_FOUND))
   message(SEND_ERROR "You must install Python to compile Teeworlds")
 endif()
@@ -545,6 +550,7 @@ set_src(BASE GLOB_RECURSE src/base
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
+  lock.h
   math.h
   system.cpp
   system.h
@@ -555,6 +561,8 @@ set_src(BASE GLOB_RECURSE src/base
   tl/sorted_array.h
   tl/string.h
   tl/threading.h
+  uuid.cpp
+  uuid.h
   vmath.h
 )
 set_src(ENGINE_INTERFACE GLOB src/engine
@@ -562,9 +570,9 @@ set_src(ENGINE_INTERFACE GLOB src/engine
   console.h
   demo.h
   engine.h
+  http.h
   kernel.h
   map.h
-  masterserver.h
   message.h
   server.h
   storage.h
@@ -586,6 +594,8 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   engine.cpp
   filecollection.cpp
   filecollection.h
+  http.cpp
+  http.h
   huffman.cpp
   huffman.h
   jobs.cpp
@@ -598,7 +608,6 @@ set_src(ENGINE_SHARED GLOB src/engine/shared
   linereader.cpp
   linereader.h
   map.cpp
-  masterserver.cpp
   masterserver.h
   memheap.cpp
   memheap.h
@@ -648,7 +657,13 @@ set(GAME_GENERATED_SHARED
 set(DEPS ${DEP_JSON} ${DEP_MD5} ${ZLIB_DEP})
 
 # Libraries
-set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${CRYPTO_LIBRARIES} ${PLATFORM_LIBS})
+set(LIBS 
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${ZLIB_LIBRARIES}
+  ${CRYPTO_LIBRARIES} 
+  ${CURL_LIBRARIES}
+  ${PLATFORM_LIBS}
+)
 
 # Targets
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_GENERATED_SHARED} ${BASE})
@@ -688,6 +703,7 @@ set_src(GAME_SERVER GLOB_RECURSE src/game/server
   gameworld.h
   player.cpp
   player.h
+  teeinfo.h
 )
 set(GAME_GENERATED_SERVER
   src/generated/server_data.cpp
@@ -1045,6 +1061,7 @@ foreach(target ${TARGETS_LINK})
   if(TARGET_OS STREQUAL "mac")
     target_link_libraries(${target} -stdlib=libc++)
     target_link_libraries(${target} -mmacosx-version-min=10.7)
+    target_link_libraries(${target} "-framework SystemConfiguration") # Required by curl 7.79.0
   endif()
   if((MINGW OR TARGET_OS STREQUAL "linux") AND PREFER_BUNDLED_LIBS)
     # Statically link the standard libraries with on MinGW/Linux so we don't

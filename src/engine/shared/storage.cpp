@@ -567,6 +567,12 @@ public:
 		GetPath(Type, pDir, pBuffer, BufferSize);
 	}
 
+	const char *GetBinaryPath(const char *pFilename, char *pBuffer, unsigned BufferSize) override
+	{
+		str_format(pBuffer, BufferSize, "%s%s%s", m_aAppDir, !m_aAppDir[0] ? "" : "/", pFilename);
+		return pBuffer;
+	}
+
 	bool GetHashAndSize(const char *pFilename, int StorageType, SHA256_DIGEST *pSha256, unsigned *pCrc, unsigned *pSize) override
 	{
 		IOHANDLE File = OpenFile(pFilename, IOFLAG_READ, StorageType);
@@ -628,6 +634,12 @@ public:
 		return p;
 	}
 };
+
+const char *IStorage::FormatTmpPath(char *aBuf, unsigned BufSize, const char *pPath)
+{
+	str_format(aBuf, BufSize, "%s.%d.tmp", pPath, pid());
+	return aBuf;
+}
 
 IStorage *CreateStorage(const char *pApplicationName, int StorageType, int NumArgs, const char **ppArguments) { return CStorage::Create(pApplicationName, StorageType, NumArgs, ppArguments); }
 IStorage *CreateTestStorage() { return CStorage::CreateTest(); }

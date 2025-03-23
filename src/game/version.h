@@ -7,8 +7,10 @@
 #define GAME_NETVERSION_HASH_FORCED "802f1be60a05665f"
 #define GAME_NETVERSION "0.7 " GAME_NETVERSION_HASH_FORCED
 #define SETTINGS_FILENAME "settings07"
-static const char GAME_RELEASE_VERSION[8] = "0.7.5";
+#define GAME_RELEASE_VERSION "0.7.5"
 
+#define GAME_NAME "Teeworlds"
+#define MOD_NAME "GhostHunt"
 #define MOD_VERSION "b0.1.0"
 
 #endif

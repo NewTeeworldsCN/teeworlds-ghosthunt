@@ -328,6 +328,8 @@ void CGameController::Tick()
 
 	if(m_GamePreparing)
 	{
+		if(Server()->Tick() % Server()->TickSpeed() == 0)
+			GameServer()->SendBroadcast("Waiting for more players...", -1);
 		if(m_GameStarted)
 		{
 			// clear humans

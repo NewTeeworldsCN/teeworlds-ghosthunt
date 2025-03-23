@@ -393,6 +393,8 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 			}
 		}
 	}
+
+	Server()->ExpireServerInfo();
 }
 
 void CPlayer::TryRespawn()
