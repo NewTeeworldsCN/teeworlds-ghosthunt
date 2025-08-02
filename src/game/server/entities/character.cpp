@@ -1193,7 +1193,7 @@ vec2 CCharacter::GetDirection() const
 
 bool CCharacter::IsSurpriseFrozen()
 {
-	return m_SurpriseFrozenTick > -1 && Server()->Tick() - m_SurpriseFrozenTick < Server()->TickSpeed();
+	return m_SurpriseFrozenTick > -1 && Server()->Tick() - m_SurpriseFrozenTick < Server()->TickSpeed() / 2;
 }
 
 bool CCharacter::IsEscapingFrozen()
