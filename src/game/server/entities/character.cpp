@@ -657,7 +657,7 @@ void CCharacter::Tick()
 				BeDraging(pChr->m_Pos);
 				if(distance(StartPos, m_Pos) < GetProximityRadius() * 2)
 				{
-					if(m_Armor < 9) // be caught
+					if(m_Armor < 4) // be caught
 					{
 						GameServer()->CreateSound(m_Pos, SOUND_CTF_RETURN);
 						pChr->CatchGhost(this);
@@ -1192,7 +1192,7 @@ vec2 CCharacter::GetDirection() const
 
 bool CCharacter::IsSurpriseFrozen()
 {
-	return m_SurpriseFrozenTick > -1 && Server()->Tick() - m_SurpriseFrozenTick < Server()->TickSpeed() / 10;
+	return m_SurpriseFrozenTick > -1 && Server()->Tick() - m_SurpriseFrozenTick < Server()->TickSpeed();
 }
 
 bool CCharacter::IsEscapingFrozen()
