@@ -602,7 +602,7 @@ void CCharacter::Tick()
 		{
 			AddEscapeProgress(random_int(1, 4));
 
-			if(GetEscapeProgress() >= 500)
+			if(GetEscapeProgress() >= 300)
 			{
 				m_pHunter->OnCharacterDeadOrEscaped(this);
 				GameServer()->CreateSound(m_Pos, SOUND_CTF_GRAB_EN);
@@ -610,7 +610,7 @@ void CCharacter::Tick()
 					SetPos(m_pHunter->GetPos());
 				BeCaught(nullptr, false);
 			}
-			else if(GetEscapeProgress() > 380 && GetEscapeProgress() % 25 == 0)
+			else if(GetEscapeProgress() > 200 && GetEscapeProgress() % 15 == 0)
 			{
 				GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH);
 			}
@@ -1170,8 +1170,8 @@ void CCharacter::SnapCharacter(int SnappingClient)
 	if(m_pPlayer->GetCID() == SnappingClient || SnappingClient == -1 ||
 		(!Config()->m_SvStrictSpectateMode && m_pPlayer->GetCID() == GameServer()->m_apPlayers[SnappingClient]->GetSpectatorID()))
 	{
-		pCharacter->m_Health = m_IsCaught ? clamp(m_EscapeProgress / 25, 0, 10) : m_Health;
-		pCharacter->m_Armor = m_IsCaught ? clamp(m_EscapeProgress / 25 - 10, 0, 10) : m_Armor;
+		pCharacter->m_Health = m_IsCaught ? clamp(m_EscapeProgress / 15, 0, 10) : m_Health;
+		pCharacter->m_Armor = m_IsCaught ? clamp(m_EscapeProgress / 15 - 10, 0, 10) : m_Armor;
 		if(m_ActiveWeapon == WEAPON_NINJA)
 			pCharacter->m_AmmoCount = m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
 		else if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0)
@@ -1214,7 +1214,7 @@ void CCharacter::AddEscapeProgress(int Progress)
 		m_EscapingFrozenTick = Server()->Tick();
 	}
 
-	m_EscapeProgress = clamp(m_EscapeProgress + Progress, 0, 500);
+	m_EscapeProgress = clamp(m_EscapeProgress + Progress, 0, 300);
 }
 
 void CCharacter::CatchGhost(CCharacter *pGhost)
