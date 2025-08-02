@@ -283,7 +283,7 @@ void CGameController::Snap(int SnappingClient)
 
 	pGameData->m_GameStartTick = m_GameStartTick;
 	pGameData->m_GameStateFlags = m_GamePreparing ? GAMESTATEFLAG_WARMUP : 0;
-	pGameData->m_GameStateEndTick = 0; // no timer/infinite = 0, on end = GameEndTick, otherwise = GameStateEndTick
+	pGameData->m_GameStateEndTick = maximum(0, m_GameEndTick); // no timer/infinite = 0, on end = GameEndTick, otherwise = GameStateEndTick
 
 	CNetObj_GameDataTeam *pGameDataTeam = static_cast<CNetObj_GameDataTeam *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATATEAM, 0, sizeof(CNetObj_GameDataTeam)));
 	if(!pGameDataTeam)
