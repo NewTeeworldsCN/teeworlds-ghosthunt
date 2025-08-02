@@ -736,7 +736,7 @@ void CCharacter::Tick()
 				}
 				else if(m_vCaughtGhosts.size() > 1)
 				{
-					str_format(aWithMsg, sizeof(aWithMsg), "%lu ghost", m_vCaughtGhosts.size());
+					str_format(aWithMsg, sizeof(aWithMsg), "%lu ghosts", m_vCaughtGhosts.size());
 				}
 				else
 				{
@@ -967,6 +967,7 @@ void CCharacter::Die(int Killer, int Weapon)
 		if(!pGhost)
 			continue;
 		pGhost->BeCaught(nullptr, false);
+		pGhost->SetPos(m_Pos);
 	}
 
 	GameWorld()->RemoveEntity(this);
