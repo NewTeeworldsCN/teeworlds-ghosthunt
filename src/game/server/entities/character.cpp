@@ -674,6 +674,7 @@ void CCharacter::Tick()
 
 						TakeDamage(vec2(0.f, 0.f), vec2(0.f, 0.f), 10, m_pPlayer->GetCID(), WEAPON_NINJA);
 						pChr->TakeDamage(vec2(0.f, 0.f), vec2(0.f, 0.f), 2, m_pPlayer->GetCID(), WEAPON_NINJA);
+						m_LatestPrevInput.m_Fire = m_LatestInput.m_Fire = m_Input.m_Fire = 0;
 					}
 				}
 			}
