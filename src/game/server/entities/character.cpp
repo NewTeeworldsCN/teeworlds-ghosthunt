@@ -645,7 +645,7 @@ void CCharacter::Tick()
 				if(!GameServer()->Collision()->IntersectLine(StartPos, m_Pos, nullptr, nullptr))
 					Visible = true;
 			}
-			if(pChr->IsGhostCleanerUsing())
+			if(pChr->IsGhostCleanerUsing() && !pChr->IsSurpriseFrozen())
 			{
 				pChr->SetEmote(EMOTE_HAPPY, Server()->Tick() + 1);
 				if(!m_pPlayer->m_LastEmoteTick || m_pPlayer->m_LastEmoteTick + Server()->TickSpeed() * 3 < Server()->Tick())
@@ -674,7 +674,6 @@ void CCharacter::Tick()
 
 						TakeDamage(vec2(0.f, 0.f), vec2(0.f, 0.f), 10, m_pPlayer->GetCID(), WEAPON_NINJA);
 						pChr->TakeDamage(vec2(0.f, 0.f), vec2(0.f, 0.f), 2, m_pPlayer->GetCID(), WEAPON_NINJA);
-						m_LatestPrevInput.m_Fire = m_LatestInput.m_Fire = m_Input.m_Fire = 0;
 					}
 				}
 			}
